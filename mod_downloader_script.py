@@ -40,7 +40,7 @@ print("Files_path:" + files_path)
 temp_folder = files_path + "downloads/"
 Mb = 1024*1024
 block_sizes = [Mb, 5*Mb, 10*Mb, 20*Mb, 50*Mb]
-BLOCK_SIZE = block_sizes[1]
+BLOCK_SIZE = block_sizes[0]
 
 ##############################################################
 ##########              Кусочек локальных модов
@@ -151,7 +151,7 @@ class Downloading(object):
         with open(self.zip_file, 'r+b') as filestream:
             filestream.seek(self.loaded_size)
 
-            self.progress = u'Загрузка: 0/%.2f Mb' % (self.file_size/Mb)
+            self.progress = u'Загрузка...'
             fp = urllib2.urlopen(request)
             readed = fp.read(BLOCK_SIZE)
             while readed:
@@ -208,7 +208,8 @@ class ModLoader(object):
     __progress = u'Загрузка не ведется'  # Текущий прогресс
     processing = False
     connected = False  # Получилось ли загрузить индекс
-    mods_on_page = 10
+    mods_on_page = 100
+    sorting = 'id'
     sorting_func = lambda self, x: x['idmod']
     
     mods = {}
@@ -270,6 +271,18 @@ class ModLoader(object):
     def get_page(self, page=0):
         return self.sorted_mods[page*self.mods_on_page:(page+1)*self.mods_on_page]
     
+    def sort(self, to = 'modid'):
+        if to == 'name':
+            f = lambda x: x['title']
+        elif to == 'size':
+            f = lambda x: x['size']
+        elif to == 'date':
+            f = lambda x: x['last_modified']
+        else:
+            f = lambda x: x['modid']
+        self.sorting = to
+        self.resort_mods(f)
+    
     def resort_mods(self, func=None):
         if func:
             self.sorting_func = func
@@ -278,10 +291,13 @@ class ModLoader(object):
         for x in self.local_mods:
             self.sorted_mods.remove(x)
             self.sorted_mods.insert(0, x)
+        restart_interaction()
     
     def delete_mod(self, mod_id):
+        self.processing = True
         self.local_mods[mod_id].delete()
         del self.local_mods[mod_id]
+        self.processing = False
 
     # Загрузка
     def download_mod_worker(self, mod_id):

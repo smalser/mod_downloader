@@ -1,3 +1,6 @@
+init 100500 python:
+    config.debug = True
+
 init python:
     from mod_downloader_script import mlobj
     mods['mod_downloader'] = "Загрузка модов"
@@ -8,44 +11,89 @@ label mod_downloader:
 
 screen mod_loader(page=0):
 
-    # Штука для обновления статуса скачивания
-    #$ status = mlobj.progress
-    #if mlobj.progress: # Хз почему по другому не работает нормально
-    #    timer 0.5 repeat True action Function(renpy.restart_interaction)
-    #    #TODO: попробовать вместо этого вызывать renpy.exports.restart_interaction
-    
-
-    text str(mlobj.progress):
-        xalign 1.0 yalign 0.0
-        
-
     $ mods = mlobj.get_page(page)
-    window background Frame(get_image("gui/choice/day/choice_box.png"),50,50) left_padding 10 top_padding 10 right_padding 10 bottom_padding 10:
-        area(0.0,0.0,0.75,0.95)
-        side "c r":
-            #viewport id "glory_ambience":
-            #    draggable True
-            #    mousewheel True
-            #    scrollbars None
-
-            #    has grid 1 len(mods)
-            vbox:
-                for mod in mods:
-                    textbutton mod['title'] + '(%.2f Mb)' % mod['size']:
-                        #style "log_button"
-                        text_style "music_link"
-                        if mod['idmod'] in mlobj.local_mods:
-                            text_color "#A00"
-                            action Function(mlobj.delete_mod, mod['idmod'])
+    window background get_image("gui/settings/preferences_bg.jpg") xalign 0.5 yalign 0.5:
+        vbox:
+            xalign 0.5
+            xfill True
+            text str(mlobj.progress) style "settings_link" xalign 0.5 color "#ffffff"
+            #hbox:
+            #    textbutton "Загруженные"
+            #    textbutton "Все"
+            #    
+            hbox:
+                xcenter 0.5
+                xfill True
+                for txt, to in (('По имени', 'name'), ('По размеру', 'size'), ('По дате', 'date')):
+                    textbutton txt:
+                        style "log_button" text_style "settings_link"
+                        if mlobj.sorting == to:
+                            text_color "#FFF"
                         else:
-                            text_color "#aaa"
-                            action Function(mlobj.invoke_download, mod['idmod'])
+                            action Function(mlobj.sort, to)
+        
+        side "c r":
+            #area (0.1, 0.24, 0.6, 0.70)
+            area (0.275, 0.225, 0.48, 0.70)
+            
+            viewport id "mods":
+                draggable True
+                mousewheel True
+                scrollbars None
+                yinitial 0.0
+
+                #has grid 2 len(mods)
+                has vbox
+                
+                for mod in mods:
+                    hbox:
+                        text '|%.2f Mb|' % (mod['size']):
+                            ycenter 0.5 xsize 300 xalign 1.0
+                            color "#000"
+                            
+                        textbutton mod['title']:
+                            xalign 0.0
+                            ycenter 0.5
+                            style "log_button" text_style "settings_text"
+                            # Когда обрабатывается что-то
+                            if mlobj.processing:
+                                text_color "#AAA"
+                                action NullAction()
+                            elif mod['idmod'] in mlobj.local_mods:
+                                text_color "#F00"
+                                action Function(mlobj.delete_mod, mod['idmod'])
+                            else:
+                                #text_color "#aaa"
+                                action Function(mlobj.invoke_download, mod['idmod'])
 
             #$ vbar_null = Frame(get_image("gui/settings/vbar_null.png"),0,0)
-            #vbar value YScrollValue("glory_ambience") bottom_bar vbar_null top_bar vbar_null thumb "images/gui/settings/vthumb.png" thumb_offset -10
+            vbar value YScrollValue("mods") bottom_bar "images/misc/none.png" top_bar "images/misc/none.png" thumb "images/gui/settings/vthumb.png" thumb_offset -12
+    
+        vbox:
+            yalign 0.5 xalign 0.99
+            
+            imagebutton auto "images/gui/ipad/next_%s.png":
+                if page < mlobj.pages:
+                    action [Hide("mod_loader"), ShowMenu("mod_loader", page+1)]
+            #null height 30
+            #imagebutton auto "images/gui/dialogue_box/day/fast_forward_%s.png":
+            #    if page < mlobj.pages:
+            #        action [Hide("mod_loader"), ShowMenu("mod_loader", mlobj.pages)]
+            
+        vbox:
+            yalign 0.5 xalign 0.01
+            imagebutton auto "images/gui/ipad/prev_%s.png":
+                if page > 0:
+                    action [Hide("mod_loader"), ShowMenu("mod_loader", page-1)]
+            #null height 30
+            #imagebutton auto "images/gui/dialogue_box/day/fast_backward_%s.png":
+            #    if page > 0:
+            #        action [Hide("mod_loader"), ShowMenu("mod_loader", 0)]
+    
+    
     
     hbox:
-        spacing 10
+        spacing 5
         xalign 1.0 ypos 0.9
         textbutton "Назад":
             ycenter 0.5
