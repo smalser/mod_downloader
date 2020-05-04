@@ -35,16 +35,17 @@ except:
 ###################### Vars
 host_url = 'http://191.ru/es/'
 json_url = host_url + 'project2.json'
-files_path = os.environ.get("ANDROID_PUBLIC", "")
+files_path = os.environ.get("ANDROID_PUBLIC", os.getcwd()) + '/'
+print("Files_path:" + files_path)
 temp_folder = files_path + "downloads/"
 Mb = 1024*1024
 block_sizes = [Mb, 5*Mb, 10*Mb, 20*Mb, 50*Mb]
-BLOCK_SIZE = block_sizes[3]
+BLOCK_SIZE = block_sizes[1]
 
 ##############################################################
 ##########              Кусочек локальных модов
 ##############################################################
-class LocalMod():
+class LocalMod(object):
     def __init__(self, path, files, **data):
         self.path = path
         self.files = files
@@ -92,7 +93,7 @@ class LocalMod():
 
 
 
-class Downloading:
+class Downloading(object):
     url = ''
     zip_file = ''
     loaded_size = 0
@@ -105,7 +106,7 @@ class Downloading:
         return mlobj.progress
 
     @progress.setter
-    def progress_setter(self, value):
+    def progress(self, value):
         mlobj.progress = value
 
     def __init__(self, url='', **mod_data):
@@ -130,7 +131,8 @@ class Downloading:
             except Exception as exp:
                 print(exp)
             raise Exception(u'Ошибка загрузки')
-        self.unpacking()
+        if not self.unpacking():
+            return
         localmod = LocalMod.Create(self.files[0], self.files, **self.mod_data)
         self.progress = u'Готово'
         return localmod.idmod, localmod
@@ -149,32 +151,35 @@ class Downloading:
         with open(self.zip_file, 'r+b') as filestream:
             filestream.seek(self.loaded_size)
 
+            self.progress = u'Загрузка: 0/%.2f Mb' % (self.file_size/Mb)
             fp = urllib2.urlopen(request)
             readed = fp.read(BLOCK_SIZE)
             while readed:
                 filestream.write(readed)
                 readed = fp.read(BLOCK_SIZE)
                 self.loaded_size += BLOCK_SIZE
-                self.progress = 'Загрузка: %d/%.2f Mb' % (self.loaded_size/Mb, self.file_size/Mb)
-                print(self.progress)
+                self.progress = u'Загрузка: %d/%.2f Mb' % (self.loaded_size/Mb, self.file_size/Mb)
+                #print(self.progress)
             self.progress = u'Загружено, ожидаем распаковку'
 
     def unpacking(self):
         self.progress = u'Распаковка...'
         try:
             zipf = zipfile.ZipFile(self.zip_file)
-            self.files = zipf.namelist()
-            for i, name in enumerate(self.files):
+            self.files = []
+            ln = len(zipf.namelist())
+            for i, name in enumerate(zipf.namelist()):
                 zipf.extract(name, files_path)
-                self.progress = u'Распаковка : %d/%d' % (i, len(self.files))
-                print(self.progress)
-                os.rename(name, name.decode('cp866')) # Вроде так нежно декодить, такое себе
+                self.progress = u'Распаковка : %d/%d' % (i, ln)
+                #print(self.progress)
+                os.rename(files_path+name, files_path+name.decode('cp866')) # Вроде так нежно декодить, такое себе
+                self.files.append(files_path+name.decode('cp866'))
             try:
                 os.remove(self.zip_file)
-                pass
             except:
                 pass
             self.progress = u"Распаковано"
+            return True
         except Exception as exp:
             print(exp)
             self.progress = u'Ошибка распаковки'
@@ -199,13 +204,15 @@ class Downloading:
 ##########              Кусочек модлоадера
 ##############################################################
 #TODO: header Range
-class ModLoader:
+class ModLoader(object):
     __progress = u'Загрузка не ведется'  # Текущий прогресс
     processing = False
     connected = False  # Получилось ли загрузить индекс
     mods_on_page = 10
+    sorting_func = lambda self, x: x['idmod']
     
     mods = {}
+    sorted_mods = []
     pages = 0
     local_mods = {}
 
@@ -214,7 +221,7 @@ class ModLoader:
         return self.__progress
 
     @progress.setter
-    def prog_set(self, value):
+    def progress(self, value):
         print(value)
         self.__progress = value
         restart_interaction()
@@ -255,13 +262,22 @@ class ModLoader:
                         }
             self.pages = len(self.mods)/self.mods_on_page
             invoke_in_thread(self.set_mods_info, self.mods.values())
+            self.resort_mods()
             self.drop_mods()
         except Exception as e:
             print(u'Неудалось десериализировать моды ' + str(e))
 
     def get_page(self, page=0):
-        mds = list(self.mods.values())[page*self.mods_on_page:(page+1)*self.mods_on_page]
-        return mds
+        return self.sorted_mods[page*self.mods_on_page:(page+1)*self.mods_on_page]
+    
+    def resort_mods(self, func=None):
+        if func:
+            self.sorting_func = func
+        self.sorted_mods = list(self.mods.values())
+        self.sorted_mods.sort(key=self.sorting_func)
+        for x in self.local_mods:
+            self.sorted_mods.remove(x)
+            self.sorted_mods.insert(0, x)
     
     def delete_mod(self, mod_id):
         self.local_mods[mod_id].delete()
@@ -282,7 +298,9 @@ class ModLoader:
             self.processing = False
 
     def set_mods_info(self, mds):
-        for m in mds:
+        for i, m in enumerate(mds):
+            if (i+1) % 100 == 0:
+                restart_interaction()
             if m['size'] == 0:
                 fp = urllib2.urlopen(m['url'])
                 m['size'] = float(fp.headers['content-length'])/Mb
@@ -300,7 +318,7 @@ class ModLoader:
             return -1
 
     def invoke_download(self, mod_id):
-        self.download_mod_worker(mod_id)
-        #invoke_in_thread(self.download_mod_worker, mod_id)
+        #self.download_mod_worker(mod_id)
+        invoke_in_thread(self.download_mod_worker, mod_id)
 
 mlobj = ModLoader()

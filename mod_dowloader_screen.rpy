@@ -11,11 +11,11 @@ screen mod_loader(page=0):
     # Штука для обновления статуса скачивания
     #$ status = mlobj.progress
     #if mlobj.progress: # Хз почему по другому не работает нормально
-    #    timer 0.5 repeat True action SetVariable(status, mlobj.progress)
-        #TODO: попробовать вместо этого вызывать renpy.exports.restart_interaction
+    #    timer 0.5 repeat True action Function(renpy.restart_interaction)
+    #    #TODO: попробовать вместо этого вызывать renpy.exports.restart_interaction
     
 
-    text mlobj.progress:
+    text str(mlobj.progress):
         xalign 1.0 yalign 0.0
         
 
@@ -54,7 +54,7 @@ screen mod_loader(page=0):
             else:
                 action NullAction()
 
-        text "%d/%d" % (page, mlobj.pages) ycenter 0.5
+        text "%d/%d" % (page+1, mlobj.pages+1) ycenter 0.5
 
         textbutton "Вперед":
             ycenter 0.5
