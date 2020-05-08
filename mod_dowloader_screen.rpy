@@ -111,5 +111,7 @@ screen mod_loader(page=0):
             else:
                 action NullAction()
 
-    textbutton "Exit" text_size 64 xcenter 0.9 ypos 0.5 action [Hide("mod_loader"), MainMenu(False)]
-    textbutton "Reload" text_size 64 xcenter 0.9 ypos 0.6 action Function(renpy.utter_restart)
+    vbox:
+        xalign 1.0 yalign 0.75
+        textbutton "Exit" text_size 64 xcenter 0.5 action [Hide("mod_loader"), MainMenu(False)]
+        textbutton "Reload" text_size 64 xcenter 0.5 action Function(renpy.utter_restart)

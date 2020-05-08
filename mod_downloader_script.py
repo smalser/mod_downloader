@@ -7,6 +7,7 @@ import urllib, urllib2, zipfile
 
 
 try:
+    import renpy
     from renpy.exports import invoke_in_thread, restart_interaction
     from renpy.game import persistent
 except:
@@ -35,7 +36,10 @@ except:
 ###################### Vars
 host_url = 'http://191.ru/es/'
 json_url = host_url + 'project2.json'
-files_path = os.environ.get("ANDROID_PUBLIC", os.getcwd()) + '/'
+if renpy.android:
+    files_path = os.environ.get("ANDROID_PUBLIC", os.getcwd()) + '/'
+else:
+    files_path = renpy.basedir + "/"
 print("Files_path:" + files_path)
 temp_folder = files_path + "downloads/"
 Mb = 1024*1024
@@ -203,15 +207,14 @@ class Downloading(object):
 ##############################################################
 ##########              Кусочек модлоадера
 ##############################################################
-#TODO: header Range
 class ModLoader(object):
     __progress = u'Загрузка не ведется'  # Текущий прогресс
     processing = False
     connected = False  # Получилось ли загрузить индекс
     mods_on_page = 100
     sorting = 'id'
-    sorting_func = lambda self, x: x['idmod']
-    
+    sorting_func = None
+
     mods = {}
     sorted_mods = []
     pages = 0
@@ -255,10 +258,10 @@ class ModLoader(object):
                 urllib.urlretrieve(json_url, 'project2.json')
         except Exception as e:
             print(u'Не удалось подключиться к серверу ' + str(e))
-        
+
         try:
             js = json.load(io.open('project2.json', 'r', encoding='utf-8'))
-            self.mods = {int(x['idmod']): {'idmod': int(x['idmod']), 'title':x['title'], 'url':host_url+x['files_android'][0], 'size': 0}
+            self.mods = {int(x['idmod']): {'idmod': int(x['idmod']), 'title':x['title'], 'url':host_url+x['files_android'][0], 'size': 0, 'last_modified': 0}
                             for x in js['packs'] if 'files_android' in x and x['files_android']
                         }
             self.pages = len(self.mods)/self.mods_on_page
@@ -270,7 +273,7 @@ class ModLoader(object):
 
     def get_page(self, page=0):
         return self.sorted_mods[page*self.mods_on_page:(page+1)*self.mods_on_page]
-    
+
     def sort(self, to = 'modid'):
         if to == 'name':
             f = lambda x: x['title']
@@ -282,15 +285,19 @@ class ModLoader(object):
             f = lambda x: x['modid']
         self.sorting = to
         self.resort_mods(f)
-    
+
     def resort_mods(self, func=None):
-        if func:
+        if func is not None:
             self.sorting_func = func
+        if self.sorting_func is None:
+            self.sorting_func = lambda x: x['idmod']
+
         self.sorted_mods = list(self.mods.values())
         self.sorted_mods.sort(key=self.sorting_func)
         for x in self.local_mods:
-            self.sorted_mods.remove(x)
-            self.sorted_mods.insert(0, x)
+            mod = self.mods[x]
+            self.sorted_mods.remove(mod)
+            self.sorted_mods.insert(0, mod)
         restart_interaction()
     
     def delete_mod(self, mod_id):
@@ -321,6 +328,7 @@ class ModLoader(object):
                 fp = urllib2.urlopen(m['url'])
                 m['size'] = float(fp.headers['content-length'])/Mb
                 m['last_modified'] = time.mktime(time.strptime(fp.headers['Last-Modified'], "%a, %d %b %Y %H:%M:%S %Z"))
+        self.resort_mods()
         self.drop_mods()
         
     def get_size(self, fp=None, url=None):
