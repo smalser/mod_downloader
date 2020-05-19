@@ -39,7 +39,7 @@ json_url = host_url + 'project2.json'
 if renpy.android:
     files_path = os.environ.get("ANDROID_PUBLIC", os.getcwd()) + '/'
 else:
-    files_path = renpy.basedir + "/"
+    files_path = renpy.config.basedir + "/"
 print("Files_path:" + files_path)
 temp_folder = files_path + "downloads/"
 Mb = 1024*1024
