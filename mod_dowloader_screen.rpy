@@ -1,12 +1,24 @@
-init 100500 python:
+init python:
+    config.developer = True
+    config.console = True
+    
+init 10050000 python:
     config.debug = True
+    config.console = True
 
 init python:
-    from mod_downloader_script import mlobj
+    from mds import mlobj
     mods['mod_downloader'] = "Загрузка модов"
+    mods['mod_downloader1'] = "Konsol"
+
+label mod_downloader1:
+    python:
+        _console.enter()
+    pause()
+
 
 label mod_downloader:
-    #$ mlobj = ModLoader()
+    # $ mlobj = ModLoader()
     call screen mod_loader
 
 screen mod_loader(page=0):

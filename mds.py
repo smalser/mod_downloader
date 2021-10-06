@@ -39,7 +39,7 @@ json_url = host_url + 'project2.json'
 if renpy.android:
     files_path = os.environ.get("ANDROID_PUBLIC", os.getcwd()) + '/'
 else:
-    files_path = renpy.config.basedir + "/"
+    files_path = renpy.config.savedir + "/"
 print("Files_path:" + files_path)
 temp_folder = files_path + "downloads/"
 Mb = 1024*1024
@@ -253,14 +253,14 @@ class ModLoader(object):
         try:
             last_mod = time.mktime(time.strptime(urllib2.urlopen(json_url).headers['Last-Modified'], "%a, %d %b %Y %H:%M:%S %Z"))
             self.connected = True
-            if not (os.path.exists('project2.json') and last_mod < os.path.getmtime('project2.json')):
+            if not (os.path.exists(files_path+'project2.json') and last_mod < os.path.getmtime(files_path+'project2.json')):
                 print(u"Download pleeeeease...")
-                urllib.urlretrieve(json_url, 'project2.json')
+                urllib.urlretrieve(json_url, files_path+'project2.json')
         except Exception as e:
             print(u'Не удалось подключиться к серверу ' + str(e))
 
         try:
-            js = json.load(io.open('project2.json', 'r', encoding='utf-8'))
+            js = json.load(io.open(files_path+'project2.json', 'r', encoding='utf-8'))
             self.mods = {int(x['idmod']): {'idmod': int(x['idmod']), 'title':x['title'], 'url':host_url+x['files_android'][0], 'size': 0, 'last_modified': 0}
                             for x in js['packs'] if 'files_android' in x and x['files_android']
                         }
