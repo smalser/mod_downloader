@@ -7,7 +7,7 @@ init 10050000 python:
     config.console = True
 
 init python:
-    from mds import mlobj
+    from md.mds import mlobj
     mods['mod_downloader'] = "Загрузка модов"
     mods['mod_downloader1'] = "Konsol"
 
